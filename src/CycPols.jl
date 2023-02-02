@@ -62,6 +62,8 @@ are  exceptions  where  we  can  keep  the  value a `CycPol`: evaluating at
 julia> subs(p,Pol()^-1) # evaluate as a CycPol at q⁻¹
 (2-q⁻¹)q⁻²⁴Φ₁Φ₂Φ₂₃
 
+julia> using CyclotomicNumbers
+
 julia> subs(p,Pol([E(2)],1)) # or at -q
 (-q-2)Φ₁Φ₂Φ₄₆
 ```
@@ -73,8 +75,6 @@ root  `ξ`, `ϕ′ₙ` is the product of the  `(q-ζ)` where `ζ` runs over the 
 powers  of `ξ`, and `ϕ″ₙ` is the  product for the even powers. Some further
 factors are recognized for small `n`. 
 ```julia-repl
-julia> using CyclotomicNumbers
-
 julia> CycPol(q^6-E(4))
 Φ″₈Φ⁽¹³⁾₂₄
 ```
