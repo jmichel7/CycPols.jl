@@ -1,0 +1,4 @@
+name = "CycPols"
+uuid = "05fb067e-2cd1-4891-b41e-2c136232fb98"
+authors = ["Jean Michel <jean.michel@imj-prg.fr>"]
+version = "0.1.0"
