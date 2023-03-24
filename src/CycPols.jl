@@ -367,9 +367,10 @@ function Base.show(io::IO,a::CycPol)
     if e.no>=0  
       if get(io,:expand,false)
         print(io,"(",prod(i->Pol()-E(e.conductor,i),dec(e.conductor)[e.no+1]),")")
-      else print(io,get(io,:TeX,false) ? "\\Phi" : "Φ")
+      else print(io,get(io,:TeX,false) ? "{\\Phi" : "Φ")
         print(io,stringprime(io,e.no))
         print(io,stringind(io,e.conductor))
+        if get(io,:TeX,false) print(io,"}") end
       end
     else print(io,"(",v,"-",E(e[1],-e.no),")")
     end
