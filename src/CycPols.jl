@@ -208,13 +208,6 @@ Base.isless(a::CycPol,b::CycPol)=cmp(a,b)==-1
 
 Base.:(==)(a::CycPol,b::CycPol)=cmp(a,b)==0
 
-# see if check should be false
-#CycPol(c,val::Int,v::Pair{Rational{Int},Int}...;check=false)=CycPol(c,val,
-#  ModuleElt(Pair{Root1,Int}[Root1(;r=r)=>m for (r,m) in v];check)) 
-
-CycPol(c,val::Int,tt::Tuple...;check=false)=CycPol(c,val,sum(x->v(x...),tt;
-                                   init=zero(ModuleElt{Root1,Int})))
-
 Base.one(::Type{CycPol})=CycPol(1,0)
 Base.one(p::CycPol)=CycPol(one(p.coeff),0)
 Base.isone(p::CycPol)=isone(p.coeff) && iszero(p.valuation) && iszero(p.v)
@@ -255,11 +248,12 @@ function Base.lcm(a::CycPol,b::CycPol) # forgets .coeff
   CycPol(a.coeff,max(a.valuation,b.valuation),ModuleElts.merge2(max,a.v,b.v))
 end
 
-Base.lcm(v::CycPol...)=reduce(lcm,collect(v);init=one(CycPol))
+Base.lcm(a::CycPol)=a
+Base.lcm(a::CycPol,b::CycPol,c::CycPol...)=reduce(lcm,collect(b);init=lcm(a,b))
 
 Base.lcm(v::AbstractArray{<:CycPol})=reduce(lcm,v;init=one(CycPol))
 
-const dec_dict=Dict(1=>[[1]],2=>[[1]],
+const dec_dict=Dict{Int,Vector{Vector{Int}}}(1=>[[1]],2=>[[1]],
   8=>[[1,3,5,7],[1,5],[3,7],[1,7],[3,5],[1,3],[5,7]],
  12=>[[1,5,7,11],[1,5],[7,11],[1,7],[5,11],[1,11],[5,7]],
  15=>[[1,2,4,7,8,11,13,14],[1,4,11,14],[2,7,8,13],[1,4,7,13],[2,8,11,14],
@@ -280,13 +274,14 @@ const dec_dict=Dict(1=>[[1]],2=>[[1]],
 function dec(d::Int)
   get!(dec_dict,d) do
     dd=[prime_residues(d)]
-    if (r=primitiveroot(d))!==nothing
+    r=primitiveroot(d)
+    if !isnothing(r)
       for a in 0:1
         push!(dd,sort(powermod.(r,(0:2:totient(d)-2).+a,d)))
       end
     end
     dd
-  end::Vector{Vector{Int}}
+  end
 end
 
 v(conductor=1,no=0,mul=1)=no<0 ? ModuleElt(E(conductor,-no)=>mul) : 
@@ -294,6 +289,13 @@ v(conductor=1,no=0,mul=1)=no<0 ? ModuleElt(E(conductor,-no)=>mul) :
 
 CycPol(;conductor=1,no=0)=CycPol(1,0,v(conductor,no))
   
+CycPol(c,val::Int,tt::Tuple...;check=false)=CycPol(c,val,sum(x->v(x...),tt;
+                                   init=zero(ModuleElt{Root1,Int})))
+
+# see if check should be false
+#CycPol(c,val::Int,v::Pair{Rational{Int},Int}...;check=false)=CycPol(c,val,
+#  ModuleElt(Pair{Root1,Int}[Root1(;r=r)=>m for (r,m) in v];check)) 
+
 function show_factors(d)
  map(eachindex(CycPols.dec(d))) do i
    p=CycPol(;conductor=d,no=i-1)
@@ -410,7 +412,7 @@ function bounds(conductor::Int,d::Int)::Vector{Int}
   sort(p,by=x->x/length(divisors(x)))
 end
 
-# next function is twice the speed of p(Cyc(x))
+# next function is sometimes much faster than p(x)
 (p::Pol)(x::Root1)=transpose(p.c)*x.^(p.v:degree(p))
   
 """
@@ -547,13 +549,23 @@ of polynomials:
 
   - `v=Pol([e],1)` for `e` a `Root1`, that is the value at `qe` for `e=ζₙᵏ`
   - `v=Pol([1],n)` that is the value at `qⁿ`
+```julia-repl
+julia> p=CycPol(Pol()^2-1)
+Φ₁Φ₂
+
+julia> subs(p,Pol([E(3)],1))
+ζ₃²Φ″₃Φ′₆
+
+julia> subs(p,Pol()^2)
+Φ₁Φ₂Φ₄
+```
 """
 function subs(p::CycPol,v::Pol{Root1})
   if degree(v)!=1 || valuation(v)!=1 error(v," should be Pol([Root1],1)") end
   e=v[1]
   coeff=p.coeff*e^degree(p)
   if coeff isa Pol coeff=(coeff*e^-degree(coeff))(v) end
-  re=inv(Root1(e))
+  re=inv(e)
   CycPol(coeff,valuation(p),ModuleElt(r*re=>m for (r,m) in p.v))
 end
 

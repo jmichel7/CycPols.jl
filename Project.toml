@@ -3,20 +3,20 @@ uuid = "05fb067e-2cd1-4891-b41e-2c136232fb98"
 authors = ["Jean Michel <jean.michel@imj-prg.fr>"]
 version = "0.1.0"
 
-[compat]
-julia = "1"
-ModuleElts = "0.1"
-Combinat = "0.0.3, 0.0.4, 0.0.5"
-LaurentPolynomials = "0.0.7, 0.0.8, 0.0.9"
-Primes = "0.5.3, 0.6"
-CyclotomicNumbers = "0.1"
-
 [deps]
-ModuleElts = "4249f315-58d4-4c46-b324-3577fc7dfca0"
 Combinat = "a6b051d1-fc4b-4ede-b53e-347fa9fb9a74"
-LaurentPolynomials = "10b2801c-d482-41ed-a506-4a825c59e3da"
-Primes = "27ebfcd6-29c5-5fa9-bf4b-fb8fc14df3ae"
 CyclotomicNumbers = "c380f8b6-65b3-4789-a31b-7d6b5dc6d4c5"
+LaurentPolynomials = "10b2801c-d482-41ed-a506-4a825c59e3da"
+ModuleElts = "4249f315-58d4-4c46-b324-3577fc7dfca0"
+Primes = "27ebfcd6-29c5-5fa9-bf4b-fb8fc14df3ae"
+
+[compat]
+Combinat = "0.0.3, 0.0.4, 0.0.5"
+CyclotomicNumbers = "0.1"
+LaurentPolynomials = "0.0.7, 0.0.8, 0.0.9"
+ModuleElts = "0.1"
+Primes = "0.5.3, 0.6"
+julia = "1"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
