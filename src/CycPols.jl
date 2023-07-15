@@ -121,13 +121,13 @@ module CycPols
 
 export CycPol, cyclotomic_polynomial, subs
 
-using Primes: primes, factor, eachfactor, totient #Euler φ
+using Primes: primes, factor, eachfactor, divisors, totient #Euler φ
 using ModuleElts: ModuleElts, ModuleElt
 using LaurentPolynomials: stringexp, bracket_if_needed
 using CyclotomicNumbers: CyclotomicNumbers, Root1, E, conductor, Cyc, order
 using LaurentPolynomials: Pol, LaurentPolynomials, degree, valuation,
                           coefficients, pseudodiv, exactdiv, Frac
-using Combinat: primitiveroot, divisors, collectby
+using Combinat: primitiveroot, collectby
 
 Base.numerator(p::Pol{<:Integer})=p  # to put in LaurentPolynomials
 Base.numerator(p::Pol{Cyc{Rational{T}}}) where T<:Integer =
