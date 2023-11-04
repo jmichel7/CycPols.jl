@@ -1,7 +1,7 @@
 name = "CycPols"
 uuid = "05fb067e-2cd1-4891-b41e-2c136232fb98"
 authors = ["Jean Michel <jean.michel@imj-prg.fr>"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 Combinat = "a6b051d1-fc4b-4ede-b53e-347fa9fb9a74"
@@ -13,7 +13,7 @@ Primes = "27ebfcd6-29c5-5fa9-bf4b-fb8fc14df3ae"
 [compat]
 Combinat = "0.0.5, 0.0.6, 0.1"
 CyclotomicNumbers = "0.1"
-LaurentPolynomials = "0.0.7, 0.0.8, 0.0.9"
+LaurentPolynomials = "0.1"
 ModuleElts = "0.1"
 Primes = "0.5.4, 0.6"
 julia = "1"
