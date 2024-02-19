@@ -207,6 +207,8 @@ end
 Base.isless(a::CycPol,b::CycPol)=cmp(a,b)==-1
 
 Base.:(==)(a::CycPol,b::CycPol)=cmp(a,b)==0
+Base.:(==)(p::CycPol,b::Number)=p.coeff==b && iszero(p.valuation) && iszero(p.v)
+Base.:(==)(b::Number,a::CycPol)=a==b
 
 Base.one(::Type{CycPol})=CycPol(1,0)
 Base.one(p::CycPol)=CycPol(one(p.coeff),0)
@@ -432,8 +434,8 @@ function CycPol(p::Pol{T};trace=false)where T
     a=Root1(-p[begin]//p[end])
     if a===nothing return CycPol(Pol(coefficients(p)),valuation(p)) end
     d=degree(p)-valuation(p)
-    vcyc=(Root1(;r=(a.r+i)//d)=>1 for i in 0:d-1)
-    return CycPol(p[end],valuation(p),ModuleElt(vcyc))
+    vcyc=ModuleElt(Root1(;r=(a.r+i)//d)=>1 for i in 0:d-1)
+    return CycPol(p[end],valuation(p),vcyc)
   end
   val=valuation(p)
   p=Pol(coefficients(p))
