@@ -110,7 +110,7 @@ julia> CycPol(p) # same as CycPol(;conductor=24,no=0)
 ```
 
 
-<a target='_blank' href='https://github.com/jmichel7/CycPols.jl/blob/566d311e50a023144b2aa987cac2731cc95a2d89/src/CycPols.jl#L1-L119' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/jmichel7/CycPols.jl/blob/197735c89e7b4aa2c5132f5d2544815daa068781/src/CycPols.jl#L1-L119' class='documenter-source'>source</a><br>
 
 <a id='CycPols.subs' href='#CycPols.subs'>#</a>
 **`CycPols.subs`** &mdash; *Function*.
@@ -136,7 +136,7 @@ julia> subs(p,Pol()^2)
 ```
 
 
-<a target='_blank' href='https://github.com/jmichel7/CycPols.jl/blob/566d311e50a023144b2aa987cac2731cc95a2d89/src/CycPols.jl#L544-L562' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/jmichel7/CycPols.jl/blob/197735c89e7b4aa2c5132f5d2544815daa068781/src/CycPols.jl#L546-L564' class='documenter-source'>source</a><br>
 
 <a id='CycPols.cyclotomic_polynomial' href='#CycPols.cyclotomic_polynomial'>#</a>
 **`CycPols.cyclotomic_polynomial`** &mdash; *Function*.
@@ -156,7 +156,7 @@ Pol{Int64}: q⁸-q⁴+1
 ```
 
 
-<a target='_blank' href='https://github.com/jmichel7/CycPols.jl/blob/566d311e50a023144b2aa987cac2731cc95a2d89/src/CycPols.jl#L148-L160' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/jmichel7/CycPols.jl/blob/197735c89e7b4aa2c5132f5d2544815daa068781/src/CycPols.jl#L148-L160' class='documenter-source'>source</a><br>
 
 <a id='CycPols.CycPol' href='#CycPols.CycPol'>#</a>
 **`CycPols.CycPol`** &mdash; *Type*.
@@ -169,10 +169,10 @@ Pol{Int64}: q⁸-q⁴+1
 
 `.valuation`: an `Int`.
 
-`.v`: a ModuleElt{Root1,Int} where pairs `ζ=>m` give multiplicity `m` of `ζ`.
+`.v`: a ModuleElt{Rational{Int},Int} where pairs `r=>m` give the multiplicity `m` of `Root1(;r=r)` as a root.
 
-So `CycPol(coeff,val,v)` represents `coeff*q^val*prod((q-ζ)^m for (ζ,m) in v)`.
+So `CycPol(coeff,val,v)` represents `coeff*q^val*prod((q-Root1(;r=r))^m for (r,m) in v)`.
 
 
-<a target='_blank' href='https://github.com/jmichel7/CycPols.jl/blob/566d311e50a023144b2aa987cac2731cc95a2d89/src/CycPols.jl#L173-L184' class='documenter-source'>source</a><br>
+<a target='_blank' href='https://github.com/jmichel7/CycPols.jl/blob/197735c89e7b4aa2c5132f5d2544815daa068781/src/CycPols.jl#L173-L184' class='documenter-source'>source</a><br>
 

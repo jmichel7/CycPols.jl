@@ -124,7 +124,7 @@ export CycPol, cyclotomic_polynomial, subs
 using Primes: primes, factor, eachfactor, divisors, totient #Euler φ
 using ModuleElts: ModuleElts, ModuleElt
 using LaurentPolynomials: stringexp, bracket_if_needed
-using CyclotomicNumbers: CyclotomicNumbers, Root1, E, conductor, Cyc, order
+using CyclotomicNumbers: CyclotomicNumbers, Root1, E, conductor, Cyc, order, modZ
 using LaurentPolynomials: Pol, LaurentPolynomials, degree, valuation,
                           coefficients, pseudodiv, exactdiv, Frac
 using Combinat: primitiveroot, collectby
@@ -178,14 +178,14 @@ end
 
 `.valuation`: an `Int`.
 
-`.v`: a ModuleElt{Root1,Int} where pairs `ζ=>m` give multiplicity `m` of `ζ`.
+`.v`: a ModuleElt{Rational{Int},Int} where pairs `r=>m` give the multiplicity `m` of `Root1(;r=r)` as a root.
 
-So `CycPol(coeff,val,v)` represents `coeff*q^val*prod((q-ζ)^m for (ζ,m) in v)`.
+So `CycPol(coeff,val,v)` represents `coeff*q^val*prod((q-Root1(;r=r))^m for (r,m) in v)`.
 """
 struct CycPol{T}
   coeff::T
   valuation::Int
-  v::ModuleElt{Root1,Int}
+  v::ModuleElt{Rational{Int},Int} # Root1 are too slow to sort
 end
 
 # CycPols are scalars for broadcasting
@@ -221,15 +221,15 @@ Base.copy(a::CycPol)=CycPol(a.coeff,a.valuation,a.v)
 
 LaurentPolynomials.degree(a::CycPol)=reduce(+,values(a.v);init=0)+a.valuation+degree(a.coeff)
 LaurentPolynomials.valuation(a::CycPol)=a.valuation
-LaurentPolynomials.valuation(a::CycPol,d::Root1)=reduce(+,c for (r,c) in a.v if r==d;init=0)
+LaurentPolynomials.valuation(a::CycPol,d::Root1)=reduce(+,c for (r,c) in a.v if r==d.r;init=0)
 
 function Base.:*(a::CycPol,b::CycPol)
   if iszero(a) || iszero(b) return zero(a) end
   CycPol(a.coeff*b.coeff,a.valuation+b.valuation,a.v+b.v)
 end
 
-Base.conj(a::CycPol)=CycPol(conj(a.coeff),a.valuation,ModuleElt(
-           inv(r)=>m for (r,m) in a.v))
+Base.conj(a::CycPol)=CycPol(conj(a.coeff),a.valuation,
+             ModuleElt(modZ(-r)=>m for (r,m) in a.v))
 Base.transpose(a::CycPol)=a
 Base.:*(a::CycPol,b::Number)=iszero(b) ? zero(a) : CycPol(a.coeff*b,a.valuation,a.v)
 Base.:*(b::Number,a::CycPol)=a*b
@@ -286,13 +286,13 @@ function dec(d::Int)
   end
 end
 
-v(conductor=1,no=0,mul=1)=no<0 ? ModuleElt(E(conductor,-no)=>mul) : 
- ModuleElt(map(i->E(conductor,i)=>mul,dec(conductor)[no+1]);check=false)
+v(conductor=1,no=0,mul=1)=no<0 ? ModuleElt(-no//conductor=>mul) : 
+ ModuleElt(map(i->i//conductor=>mul,dec(conductor)[no+1]);check=false)
 
 CycPol(;conductor=1,no=0)=CycPol(1,0,v(conductor,no))
   
 CycPol(c,val::Int,tt::Tuple...;check=false)=CycPol(c,val,sum(x->v(x...),tt;
-                                   init=zero(ModuleElt{Root1,Int})))
+                            init=zero(ModuleElt{Rational{Int},Int})))
 
 # see if check should be false
 #CycPol(c,val::Int,v::Pair{Rational{Int},Int}...;check=false)=CycPol(c,val,
@@ -308,17 +308,17 @@ end
 pr()=vcat(map(show_factors,sort(collect(keys(dec_dict))))...)
 
 # decompose the .v of a CycPol in subsets Φ^i (used for printing and value)
-function decompose(v::Vector{Pair{Root1,Int}})
+function decompose(v::Vector{Pair{Rational{Int},Int}})
   rr=@NamedTuple{conductor::Int, no::Int, mul::Int}[]
-  for t in collectby(x->order(first(x)),v)
-    c=order(first(t[1]))
+  for t in collectby(x->denominator(first(x)),v)
+    c=denominator(first(t[1]))
     if c==1 
       push!(rr,(conductor=c,no=0,mul=last(t[1])))
       continue
     end
     res=@NamedTuple{conductor::Int, no::Int, mul::Int}[]
     v=fill(0,c)
-    @views v[exponent.(first.(t))].=last.(t)
+    @views v[numerator.(first.(t))].=last.(t)
     for (i,r) in enumerate(dec(c))
       if (n=minimum(@view v[r]))>0 || (n=maximum(@view v[r]))<0 
         @views v[r].-=n 
@@ -387,7 +387,7 @@ end
 # fields to test first: all n such that totient(n)<=12 except 11,13,22,26
 const tested=[1,2,4,3,6,8,12,5,10,9,18,7,14,24,16,20,15,30,36,28,21,42]
 
-# list of i such that φᵢ/φ_(i∩ conductor))≤d, so a polynomial of
+# list of i such that φ(i)/φ(i∩ conductor))≤d, so a polynomial of
 # degree ≤d with coeffs in Q(ζ_conductor) could have roots power of ζᵢ
 function bounds(conductor::Int,d::Int)::Vector{Int}
   if d==0 return Int[] end
@@ -434,7 +434,7 @@ function CycPol(p::Pol{T};trace=false)where T
     a=Root1(-p[begin]//p[end])
     if a===nothing return CycPol(Pol(coefficients(p)),valuation(p)) end
     d=degree(p)-valuation(p)
-    vcyc=ModuleElt(Root1(;r=(a.r+i)//d)=>1 for i in 0:d-1)
+    vcyc=ModuleElt(modZ((a.r+i)//d)=>1 for i in 0:d-1)
     return CycPol(p[end],valuation(p),vcyc)
   end
   val=valuation(p)
@@ -442,7 +442,7 @@ function CycPol(p::Pol{T};trace=false)where T
   coeff=p[end]
   p=coeff^2==1 ? p*coeff : p//coeff
   if denominator(p)==1 p=numerator(p) end
-  vcyc=Pair{Root1,Int}[]
+  vcyc=Pair{Rational{Int},Int}[]
 
   # find factors Phi_i
   testcyc=function(c)
@@ -451,7 +451,7 @@ function CycPol(p::Pol{T};trace=false)where T
     while true
       np,r=pseudodiv(p,cyclotomic_polynomial(c))
       if iszero(r) 
-        append!(vcyc,[E(c,j)=>1 for j in (c==1 ? [0] : prime_residues(c))])
+        append!(vcyc,[j//c=>1 for j in (c==1 ? [0] : prime_residues(c))])
         p=(np[begin] isa Cyc) ? np : Pol(coefficients(np)) # why?
         if trace print("(d°$(degree(p))c$(conductor(p.c)))") end
         found=true
@@ -471,7 +471,7 @@ function CycPol(p::Pol{T};trace=false)where T
       if isempty(to_test) return found end
       found=true
       p=exactdiv(p,prod(r->Pol([-E(i,r),1],0),to_test))
-      append!(vcyc,E.(i,to_test).=>1)
+      append!(vcyc,to_test.//i.=>1)
       if trace print("[d°$(degree(p))c$(conductor(p.c)),$i:",join(to_test,","),"]") end
       if degree(p)<div(totient(i),totient(gcd(i,conductor(p.c)))) return found end
     end
@@ -568,7 +568,7 @@ function subs(p::CycPol,v::Pol{Root1})
   coeff=p.coeff*e^degree(p)
   if coeff isa Pol coeff=(coeff*e^-degree(coeff))(v) end
   re=inv(e)
-  CycPol(coeff,valuation(p),ModuleElt(r*re=>m for (r,m) in p.v))
+  CycPol(coeff,valuation(p),ModuleElt(modZ(r+re.r)=>m for (r,m) in p.v))
 end
 
 function subs(p::CycPol,v::Pol{Int})
@@ -579,11 +579,11 @@ function subs(p::CycPol,v::Pol{Int})
   val=n*valuation(p)
   if p.coeff isa Pol coeff=p.coeff(v) else coeff=p.coeff end
   if n>0
-    vcyc=vcat((map(i->Root1(;r=i)=>pow,((0:n-1).+r.r)/n) for (r,pow) in p.v)...)
+    vcyc=vcat((map(i->modZ(i)=>pow,((0:n-1).+r)/n) for (r,pow) in p.v)...)
   else
     val+=n*sum(values(p.v))
-    coeff*=(-1)^sum(values(p.v))*Cyc(prod(r^p for (r,p) in p.v))
-    vcyc=vcat((map(i->Root1(;r=i)=>pow,((0:-n-1).-r.r)/-n) for (r,pow) in p.v)...)
+    coeff*=(-1)^sum(values(p.v))*Cyc(prod(Root1(;r=r)^p for (r,p) in p.v))
+    vcyc=vcat((map(i->modZ(i)=>pow,((0:-n-1).-r)/-n) for (r,pow) in p.v)...)
   end
   CycPol(coeff,val,ModuleElt(vcyc))
 end
