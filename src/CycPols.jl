@@ -363,7 +363,7 @@ function Base.show(io::IO,a::CycPol)
     return
   end
   print(io,format_coefficient(repr(numerator(a.coeff); context=io))) 
-  v=LaurentPolynomials.varname[]
+  v=get(io,:varname,LaurentPolynomials.varname)
   if a.valuation==1 print(io,v)
   elseif a.valuation!=0 print(io,v,stringexp(io,a.valuation)) end
   for e in decompose(a.v.d)
