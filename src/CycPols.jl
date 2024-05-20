@@ -129,7 +129,6 @@ using LaurentPolynomials: Pol, LaurentPolynomials, degree, valuation,
                           coefficients, pseudodiv, exactdiv, Frac
 using Combinat: primitiveroot, collectby
 
-Base.numerator(p::Pol{<:Integer})=p  # to put in LaurentPolynomials
 Base.numerator(p::Pol{Cyc{Rational{T}}}) where T<:Integer =
   Pol{Cyc{T}}(p*denominator(p))
 Base.numerator(p::Pol{Cyc{T}}) where T<:Integer =p
@@ -206,7 +205,7 @@ end
 
 Base.isless(a::CycPol,b::CycPol)=cmp(a,b)==-1
 
-Base.:(==)(a::CycPol,b::CycPol)=cmp(a,b)==0
+Base.:(==)(a::CycPol,b::CycPol)=a.valuation==b.valuation && a.coeff==b.coeff && a.v==b.v
 Base.:(==)(p::CycPol,b::Number)=p.coeff==b && iszero(p.valuation) && iszero(p.v)
 Base.:(==)(b::Number,a::CycPol)=a==b
 
