@@ -6,12 +6,13 @@ cyclotomic  field, are important in the theories of finite reductive groups
 and  Spetses. In particular Schur elements of cyclotomic Hecke algebras are
 products of cyclotomic polynomials.
 
-The  type  `CycPol`  represents  the  product  of  a `coeff` (a constant, a
-polynomial or a rational fraction in one variable) with a rational fraction
-in  one variable with all poles or zeroes equal to 0 or roots of unity. The
-advantages  of  representing  as  `CycPol`  such  objects are: nice display
-(factorized),  less storage, fast  multiplication, division and evaluation.
-The drawback is that addition and subtraction are not implemented!
+The  type [`CycPol`](@ref) represents the product of a `coeff` (a constant,
+a  polynomial  or  a  rational  fraction  in  one variable) with a rational
+fraction  in one variable with  all poles or zeroes  equal to 0 or roots of
+unity.  The advantages of  representing as `CycPol`  such objects are: nice
+display  (factorized),  less  storage,  fast  multiplication,  division and
+evaluation.   The  drawback  is  that  addition  and  subtraction  are  not
+implemented😞
 
 This   package  uses   the  polynomials   `Pol`  defined   by  the  package
 `LaurentPolynomials`  and  the  cyclotomic  numbers  `Cyc`  defined  by the
@@ -56,7 +57,7 @@ CycPol(Pol([-2, 1]),0,(1,0),(2,0),(23,0)) # a format which can be read in Julia
 Evaluating  a `CycPol` at some `Pol` value  gives in general a `Pol`. There
 are  exceptions  where  we  can  keep  the  value a `CycPol`: evaluating at
 `Pol()^n`  (that is `q^n`) or at  `Pol([E(n,k)],1)` (that is `qζₙᵏ`). Then
-`subs` gives that evaluation:
+[`subs`](@ref) gives that evaluation:
 
 ```julia-repl
 julia> subs(p,Pol()^-1) # evaluate as a CycPol at q⁻¹
@@ -108,7 +109,7 @@ julia> CycPol(;conductor=24,no=7)
 julia> CycPol(;conductor=24,no=7)(q)
 Pol{Cyc{Int64}}: q⁴+√-2q³-q²-√-2q+1
 ```
-This package also defines the function `cylotomic_polynomial`:
+This package also defines the function [`cylotomic_polynomial`](@ref):
 ```julia-repl
 julia> p=cyclotomic_polynomial(24)
 Pol{Int64}: q⁸-q⁴+1
