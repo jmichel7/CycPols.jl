@@ -109,7 +109,7 @@ julia> CycPol(;conductor=24,no=7)
 julia> CycPol(;conductor=24,no=7)(q)
 Pol{Cyc{Int64}}: q⁴+√-2q³-q²-√-2q+1
 ```
-This package also defines the function [`cylotomic_polynomial`](@ref):
+This package also defines the function [`cyclotomic_polynomial`](@ref):
 ```julia-repl
 julia> p=cyclotomic_polynomial(24)
 Pol{Int64}: q⁸-q⁴+1
