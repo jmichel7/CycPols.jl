@@ -333,7 +333,7 @@ function decompose(v::Vector{Pair{Rational{Int},Int}})
   rr
 end
 
-function Base.show(io::IO, ::MIME"text/html", a::CycPol)
+function Base.show(io::IO, ::MIME"text/latex", a::CycPol)
   print(io,latexstring(repr(a,context=IOContext(io,:TeX=>true))))
 end
 
