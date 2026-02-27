@@ -122,20 +122,21 @@ module CycPols
 
 export CycPol, cyclotomic_polynomial, subs
 
-using Primes: primes, factor, eachfactor, divisors, totient #Euler φ
+using Primes: divisors, eachfactor, factor, primes, totient #Euler φ
 using ModuleElts: ModuleElts, ModuleElt
-using LaurentPolynomials: stringexp, bracket_if_needed
-using CyclotomicNumbers: CyclotomicNumbers, Root1, E, conductor, Cyc, order, modZ
+using LaurentPolynomials: bracket_if_needed, stringexp
+using CyclotomicNumbers: CyclotomicNumbers, Root1, E, conductor, Cyc,  modZ
 using LaurentPolynomials: Pol, LaurentPolynomials, degree, valuation,
                           coefficients, pseudodiv, exactdiv, Frac
-using Combinat: primitiveroot, collectby
+using Combinat: collectby, primitiveroot
 
 Base.numerator(p::Pol{Cyc{Rational{T}}}) where T<:Integer =
   Pol{Cyc{T}}(p*denominator(p))
 Base.numerator(p::Pol{Cyc{T}}) where T<:Integer =p
 CyclotomicNumbers.conductor(x::Pol)=lcm(conductor.(coefficients(x)))
+Base.eltype(p::Pol{T})where T=T
 
-using CyclotomicNumbers: prime_residues, stringind, format_coefficient
+using CyclotomicNumbers: format_coefficient, prime_residues, stringind
 
 function stringprime(io::IO,n)
   if iszero(n) return "" end
@@ -251,7 +252,7 @@ function Base.lcm(a::CycPol,b::CycPol) # forgets .coeff
 end
 
 Base.lcm(a::CycPol)=a
-Base.lcm(a::CycPol,b::CycPol,c::CycPol...)=reduce(lcm,collect(b);init=lcm(a,b))
+Base.lcm(a::CycPol,b::CycPol,c::CycPol...)=reduce(lcm,collect(c);init=lcm(a,b))
 
 Base.lcm(v::AbstractArray{<:CycPol})=reduce(lcm,v;init=one(CycPol))
 
@@ -291,7 +292,7 @@ v(conductor=1,no=0,mul=1)=no<0 ? ModuleElt(-no//conductor=>mul) :
 
 CycPol(;conductor=1,no=0)=CycPol(1,0,v(conductor,no))
   
-CycPol(c,val::Int,tt::Tuple...;check=false)=CycPol(c,val,sum(x->v(x...),tt;
+CycPol(c,val::Int,tt::Tuple...)=CycPol(c,val,sum(x->v(x...),tt;
                             init=zero(ModuleElt{Rational{Int},Int})))
 
 # see if check should be false
@@ -401,13 +402,13 @@ function bounds(conductor::Int,d::Int)::Vector{Int}
     push!(t,tp)
     push!(t1,p.^(eachindex(tp).-1))
   end
-  produ=function(l,d)
+  function produ(l::Vector{Vector{Int}},d::Int)
     p=filter(x->l[1][x]<=d,eachindex(l[1]))
     if length(l)==1 return map(x->[x],p) end
-    return reduce(vcat,map(i->vcat.([i],produ(l[2:end],div(d,l[1][i]))),p))
+    reduce(vcat,map(i->vcat.([i],produ(l[2:end],div(d,l[1][i]))),p))
   end
-  p=[prod(map((i,j)->j[i],l,t1)) for l in produ(t,d)]
-  p=union(map(divisors,p)...)
+  p=[prod(getindex.(t1,l)) for l in produ(t,d)]
+  p=union(divisors.(p)...)
   p=setdiff(p,tested)
   sort(p,by=x->x/length(divisors(x)))
 end
@@ -423,55 +424,56 @@ julia> @Pol q;CycPol(3*q^3-3q)
 3qΦ₁Φ₂
 ```
 """
-function CycPol(p::Pol{T};trace=false)where T
+function CycPol(p::Pol;trace=false)
  # lot of code to be as efficient as possible in all cases
-  if iszero(p) return zero(CycPol{T})
-  elseif length(p.c)==1 # p==ax^s
-    return CycPol(p.c[1],valuation(p))
-  elseif 2==count(!iszero,p.c) # p==ax^s+bx^t
-    a=Root1(-p[begin]//p[end])
-    if a===nothing return CycPol(Pol(coefficients(p)),valuation(p)) end
-    d=degree(p)-valuation(p)
-    vcyc=ModuleElt(modZ((a.r+i)//d)=>1 for i in 0:d-1)
-    return CycPol(p[end],valuation(p),vcyc)
-  end
+  if iszero(p) return zero(CycPol{eltype(p)}) end
   val=valuation(p)
-  p=Pol(coefficients(p))
+  if length(coefficients(p))==1 return CycPol(p[begin],val) end # p==ax^s
   coeff=p[end]
+  if 2==count(!iszero,coefficients(p)) # p==ax^s+bx^t
+    a=Root1(-p[begin]//coeff)
+    if a===nothing return CycPol(Pol(coefficients(p)),val) end
+    d=degree(p)-val
+    return CycPol(coeff,val,ModuleElt(modZ(i)=>1 for i in ((0:d-1).+a.r)/d))
+  end
+  p=Pol(coefficients(p))
   p=coeff^2==1 ? p*coeff : p//coeff
   if denominator(p)==1 p=numerator(p) end
   vcyc=Pair{Rational{Int},Int}[]
 
   # find factors Phi_i
-  testcyc=function(c)
-    if trace print("C$c") end
+  function testcyc(c::Int)
+    if trace print("Φ",c) end
     found=false
     while true
       np,r=pseudodiv(p,cyclotomic_polynomial(c))
       if iszero(r) 
         append!(vcyc,[j//c=>1 for j in (c==1 ? [0] : prime_residues(c))])
         p=(np[begin] isa Cyc) ? np : Pol(coefficients(np)) # why?
-        if trace print("(d°$(degree(p))c$(conductor(p.c)))") end
+        if trace print("(d°$(degree(p))c$(conductor(p)))") end
         found=true
       else break
       end
     end
-    return found
+    found
   end
 
   # find other primitive i-th roots of unity
-  testall=function(i)
-    if eltype(coefficients(p))<:Integer return false end # cannot have partial product
+  function testall(i::Int)
+    if eltype(p)<:Integer return false end # cannot have partial product
     found=false
     to_test=prime_residues(i)
     while true 
       to_test=filter(r->iszero(p(E(i,r))),to_test)
-      if isempty(to_test) return found end
+      if isempty(to_test) 
+        if trace print("ζ",i) end
+        return found
+      end
       found=true
       p=exactdiv(p,prod(r->Pol([-E(i,r),1],0),to_test))
       append!(vcyc,to_test.//i.=>1)
-      if trace print("[d°$(degree(p))c$(conductor(p.c)),$i:",join(to_test,","),"]") end
-      if degree(p)<div(totient(i),totient(gcd(i,conductor(p.c)))) return found end
+      if trace print("[d°$(degree(p))c$(conductor(p)),$i:",join(to_test,","),"]") end
+      if degree(p)<div(totient(i),totient(gcd(i,conductor(p)))) return found end
     end
   end
 
@@ -484,7 +486,7 @@ function CycPol(p::Pol{T};trace=false)where T
   
   # if not finished do a general search.
   # p is in Q(zeta_conductor)[x] so can only have a root in mu_i for i below
-  cond=(p.c[1] isa Cyc) ? conductor(p.c) : 1
+  cond=(p[begin] isa Cyc) ? conductor(p) : 1
   try_=bounds(cond,degree(p))
 # println("try_=$try_\n")
   i=1
@@ -495,7 +497,7 @@ function CycPol(p::Pol{T};trace=false)where T
     else testall(try_[i])
     end
     if found  
-      cond=(p.c[1] isa Cyc) ? conductor(p.c) : 1
+      cond=(p[begin] isa Cyc) ? conductor(p) : 1
       try_=bounds(cond,degree(p))
       i=1
 #	  print("tested==",tested,"\n")
@@ -573,15 +575,14 @@ function subs(p::CycPol,v::Pol{Int})
   if degree(v)!=valuation(v) || coefficients(v)!=[1] error(v," should be Pol()^n") end
   n=valuation(v)
   if n==0 return CycPol(p(1),0) end
-  n=Int(n)
   val=n*valuation(p)
   if p.coeff isa Pol coeff=p.coeff(v) else coeff=p.coeff end
   if n>0
-    vcyc=vcat((map(i->modZ(i)=>pow,((0:n-1).+r)/n) for (r,pow) in p.v)...)
+    vcyc=[modZ(i)=>pow for (r,pow) in p.v for i in ((0:n-1).+r)/n]
   else
     val+=n*sum(values(p.v))
     coeff*=(-1)^sum(values(p.v))*Cyc(prod(Root1(;r=r)^p for (r,p) in p.v))
-    vcyc=vcat((map(i->modZ(i)=>pow,((0:-n-1).-r)/-n) for (r,pow) in p.v)...)
+    vcyc=[modZ(i)=>pow for (r,pow) in p.v for i in ((0:-n-1).-r)/-n]
   end
   CycPol(coeff,val,ModuleElt(vcyc))
 end
