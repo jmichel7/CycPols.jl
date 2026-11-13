@@ -72,9 +72,9 @@ The variable name used when printing a `CycPol` is the same as for `Pol`s.
 
 When  showing  a  `CycPol`,  some  factors  over  extension  fields  of the
 cyclotomic polynomial `Φₙ` are given a special name. If `n` has a primitive
-root  `ξ`, `ϕ′ₙ` is the product of the  `(q-ζ)` where `ζ` runs over the odd
-powers  of `ξ`, and `ϕ″ₙ` is the  product for the even powers. Some further
-factors are recognized for small `n`. 
+root  `ξ`, `ϕ′ₙ` is the product of the `(q-ζ)` where `ζ` runs over the even
+powers  of `ξ`, and `ϕ″ₙ`  is the product for  the odd powers. Some further
+factors are recognized for small `n`.
 ```julia-repl
 julia> CycPol(q^6-E(4))
 Φ″₈Φ⁽¹³⁾₂₄
@@ -129,12 +129,16 @@ using CyclotomicNumbers: CyclotomicNumbers, Root1, E, conductor, Cyc,  modZ
 using LaurentPolynomials: Pol, LaurentPolynomials, degree, valuation,
                           coefficients, pseudodiv, exactdiv, Frac
 using Combinat: collectby, primitiveroot
+using LaTeXStrings: latexstring
 
+#------------- useful piracy ----------------
 Base.numerator(p::Pol{Cyc{Rational{T}}}) where T<:Integer =
   Pol{Cyc{T}}(p*denominator(p))
 Base.numerator(p::Pol{Cyc{T}}) where T<:Integer =p
+# next function is sometimes much faster than p(x)
+(p::Pol)(x::Root1)=transpose(p.c)*x.^(p.v:degree(p))
 CyclotomicNumbers.conductor(x::Pol)=lcm(conductor.(coefficients(x)))
-Base.eltype(p::Pol{T})where T=T
+#------------- end of useful piracy ----------
 
 using CyclotomicNumbers: format_coefficient, prime_residues, stringind
 
@@ -160,6 +164,7 @@ Pol{Int64}: q⁸-q⁴+1
 ```
 """
 function cyclotomic_polynomial(n::Integer)
+  if n<=0 throw(ArgumentError("$n should be positive")) end
   get!(cyclotomic_polynomial_dict,n) do
     res=Pol(fill(1,n),0;check=false)
     for d in divisors(n)
@@ -195,7 +200,10 @@ Base.broadcastable(p::CycPol)=Ref(p)
 Base.convert(::Type{CycPol{T1}},p::CycPol{T}) where {T1,T}=T==T1 ? p :
                                CycPol(T1(p.coeff),p.valuation,p.v)
 
-Base.hash(a::CycPol, h::UInt)=hash(a.coeff,hash(a.valuation,hash(a.v,h)))
+function Base.hash(a::CycPol, h::UInt)
+  if a.coeff==0 return hash(a.coeff,h) end
+  hash(a.coeff,hash(a.valuation,hash(a.v,h)))
+end
 
 function Base.cmp(a::CycPol,b::CycPol)
   res=cmp(a.valuation,b.valuation)
@@ -207,11 +215,11 @@ end
 
 Base.isless(a::CycPol,b::CycPol)=cmp(a,b)==-1
 
-Base.:(==)(a::CycPol,b::CycPol)=a.valuation==b.valuation && a.coeff==b.coeff && a.v==b.v
-Base.:(==)(p::CycPol,b::Number)=p.coeff==b && iszero(p.valuation) && iszero(p.v)
+Base.:(==)(a::CycPol,b::CycPol)=(a.coeff==b.coeff==0) || (a.valuation==b.valuation && a.coeff==b.coeff && a.v==b.v)
+Base.:(==)(p::CycPol,b::Number)=(p.coeff==b==0) || (p.coeff==b && iszero(p.valuation) && iszero(p.v))
 Base.:(==)(b::Number,a::CycPol)=a==b
 
-Base.one(::Type{CycPol})=CycPol(1,0)
+Base.one(::Type{CycPol{T}}) where T=CycPol(one(T),0)
 Base.one(p::CycPol)=CycPol(one(p.coeff),0)
 Base.isone(p::CycPol)=isone(p.coeff) && iszero(p.valuation) && iszero(p.v)
 Base.zero(::Type{CycPol{T}}) where T=CycPol(zero(T),0)
@@ -235,20 +243,19 @@ Base.transpose(a::CycPol)=a
 Base.:*(a::CycPol,b::Number)=iszero(b) ? zero(a) : CycPol(a.coeff*b,a.valuation,a.v)
 Base.:*(b::Number,a::CycPol)=a*b
 Base.:-(a::CycPol)=CycPol(-a.coeff,a.valuation,a.v)
-Base.inv(a::CycPol)=CycPol(LaurentPolynomials.bestinv(a.coeff), -a.valuation, -a.v)
+Base.inv(a::CycPol)=CycPol(LaurentPolynomials.bestinv(a.coeff),-a.valuation,-a.v)
 Base.:^(a::CycPol, n::Integer)=n>=0 ? Base.power_by_squaring(a,n) :
                                       Base.power_by_squaring(inv(a),-n)
 Base.://(a::CycPol,b::CycPol)=CycPol(a.coeff//b.coeff, a.valuation-b.valuation, a.v-b.v)
 Base.://(a::CycPol,b::Number)=CycPol(a.coeff//b,a.valuation,a.v)
-Base.:/(a::CycPol,b::CycPol)=CycPol(a.coeff/b.coeff, a.valuation-b.valuation, a.v-b.v)
-Base.:/(a::CycPol,b::Number)=CycPol(a.coeff/b,a.valuation,a.v)
+Base.:/(a::CycPol,b::CycPol)=a//b
+Base.:/(a::CycPol,b::Number)=a//b
 Base.:div(a::CycPol,b::Number)=CycPol(div(a.coeff,b),a.valuation,a.v)
 
-function Base.lcm(a::CycPol,b::CycPol) # forgets .coeff
-  if (b.coeff isa Pol && !iszero(degree(b))) 
-    error(b,".coeff should be scalar")
-  end
-  CycPol(a.coeff,max(a.valuation,b.valuation),ModuleElts.merge2(max,a.v,b.v))
+function Base.lcm(a::CycPol,b::CycPol)
+  x=a.coeff isa Pol ? (b.coeff isa Pol ? lcm(a.coeff,b.coeff) : a.coeff) :
+    b.coeff isa Pol ? b.coeff : 1
+  CycPol(x,max(a.valuation,b.valuation),max(a.v,b.v))
 end
 
 Base.lcm(a::CycPol)=a
@@ -256,7 +263,7 @@ Base.lcm(a::CycPol,b::CycPol,c::CycPol...)=reduce(lcm,collect(c);init=lcm(a,b))
 
 Base.lcm(v::AbstractArray{<:CycPol})=reduce(lcm,v;init=one(CycPol))
 
-const dec_dict=Dict{Int,Vector{Vector{Int}}}(1=>[[1]],2=>[[1]],
+const dec_dict=Dict{Int,Vector{Vector{Int}}}(1=>[[0]],2=>[[1]],
   8=>[[1,3,5,7],[1,5],[3,7],[1,7],[3,5],[1,3],[5,7]],
  12=>[[1,5,7,11],[1,5],[7,11],[1,7],[5,11],[1,11],[5,7]],
  15=>[[1,2,4,7,8,11,13,14],[1,4,11,14],[2,7,8,13],[1,4,7,13],[2,8,11,14],
@@ -287,9 +294,15 @@ function dec(d::Int)
   end
 end
 
-v(conductor=1,no=0,mul=1)=no<0 ? ModuleElt(-no//conductor=>mul) : 
- ModuleElt(map(i->i//conductor=>mul,dec(conductor)[no+1]);check=false)
+function v(conductor::Integer=1,no::Integer=0,mul::Integer=1)
+  if conductor<=0 throw(ArgumentError("conductor should be positive")) end
+  d=dec(conductor)
+  if no>=length(d) throw(ArgumentError("no should be in <$(length(d))")) end
+  no<0 ? ModuleElt(-no//conductor=>mul) : 
+  ModuleElt(map(i->i//conductor=>mul,d[no+1]);check=false)
+end
 
+"`CycPol(;conductor=1,no=0)` the `no`-th factor of `Φ_`conductor if `no≥0` or `q-E(conductor,-no)` otherwise"
 CycPol(;conductor=1,no=0)=CycPol(1,0,v(conductor,no))
   
 CycPol(c,val::Int,tt::Tuple...)=CycPol(c,val,sum(x->v(x...),tt;
@@ -413,9 +426,6 @@ function bounds(conductor::Int,d::Int)::Vector{Int}
   sort(p,by=x->x/length(divisors(x)))
 end
 
-# next function is sometimes much faster than p(x)
-(p::Pol)(x::Root1)=transpose(p.c)*x.^(p.v:degree(p))
-  
 """
 `CycPol(p::Pol)` Converts `Pol` `p` to `CycPol`
     
@@ -424,9 +434,9 @@ julia> @Pol q;CycPol(3*q^3-3q)
 3qΦ₁Φ₂
 ```
 """
-function CycPol(p::Pol;trace=false)
+function CycPol(p::Pol{T};trace=false)where T
  # lot of code to be as efficient as possible in all cases
-  if iszero(p) return zero(CycPol{eltype(p)}) end
+  if iszero(p) return zero(CycPol{T}) end
   val=valuation(p)
   if length(coefficients(p))==1 return CycPol(p[begin],val) end # p==ax^s
   coeff=p[end]
@@ -460,7 +470,7 @@ function CycPol(p::Pol;trace=false)
 
   # find other primitive i-th roots of unity
   function testall(i::Int)
-    if eltype(p)<:Integer return false end # cannot have partial product
+    if T<:Integer return false end # cannot have partial product
     found=false
     to_test=prime_residues(i)
     while true 
@@ -516,7 +526,8 @@ function (p::CycPol)(x)
   l=decompose(p.v.d)
   for e in l
     if iszero(res) return res end
-    if e.no==0 res*=(cyclotomic_polynomial(e.conductor)(x))^e.mul end
+    u=cyclotomic_polynomial(e.conductor)(x)
+    if e.no==0 res*=e.mul<0 ? (u*1//1)^e.mul : u^e.mul end
   end
   for e in l
     if iszero(res) return res end

@@ -19,8 +19,7 @@ function mytest(file::String,src::String,man::String)
   end
   exec==man
 end
-@testset verbose = true "Gapjm" begin
-@testset "CycPols.jl" begin
+@testset "CycPols.jl" verbose=true begin
 @test mytest("CycPols.jl","using LaurentPolynomials","nothing")
 @test mytest("CycPols.jl","@Pol q","Pol{Int64}: q")
 @test mytest("CycPols.jl","p=CycPol(q^25-q^24-2q^23-q^2+q+2)","(q-2)Φ₁Φ₂Φ₂₃")
@@ -43,4 +42,4 @@ end
 @test mytest("CycPols.jl","cyclotomic_polynomial(24)","Pol{Int64}: q⁸-q⁴+1")
 @test mytest("CycPols.jl","@Pol q;CycPol(3*q^3-3q)","3qΦ₁Φ₂")
 end
-end
+include("cycpols-properties.jl")
