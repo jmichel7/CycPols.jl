@@ -261,7 +261,7 @@ end
 Base.lcm(a::CycPol)=a
 Base.lcm(a::CycPol,b::CycPol,c::CycPol...)=reduce(lcm,collect(c);init=lcm(a,b))
 
-Base.lcm(v::AbstractArray{<:CycPol})=reduce(lcm,v;init=one(CycPol))
+Base.lcm(v::AbstractArray{<:CycPol})=reduce(lcm,v;init=one(CycPol{Int}))
 
 const dec_dict=Dict{Int,Vector{Vector{Int}}}(1=>[[0]],2=>[[1]],
   8=>[[1,3,5,7],[1,5],[3,7],[1,7],[3,5],[1,3],[5,7]],
